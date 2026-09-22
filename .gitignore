@@ -13,3 +13,23 @@ node_modules/
 *.suo
 .vs/
 .DS_Store
+
+# Python environments / packaging / tools
+.venv/
+venv/
+env/
+ENV/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+.hypothesis/
+.ipynb_checkpoints/
+.Python
+# pyproject.toml and dependency lockfiles remain trackable.
