@@ -32,7 +32,7 @@ class Result:
 
 class Driver:
     """One serial connection. Use one driver per concurrent worker; close rolls back."""
-    def __init__(self, uri, username, password, *, database='neo4j', timeout=30):
+    def __init__(self, uri, username, password, *, database='', timeout=30):
         u = urlsplit(uri)
         if u.scheme not in ('bolt', 'bolt+s') or not u.hostname or u.username or u.password or u.path not in ('', '/') or u.query or u.fragment:
             raise ValueError('expected bolt://host:port or bolt+s://host:port')
@@ -60,6 +60,9 @@ class Driver:
         return bytes(data)
 
     def _send(self, tag, *fields):
+        if tag in (0x10, 0x11):
+            extra = fields[2 if tag == 0x10 else 0]
+            if not extra.get('db'): extra.pop('db', None)
         if self._socket is None: raise ConnectionError('driver is closed')
         body = encode(Structure(tag, fields))
         if len(body) > MAX_MESSAGE: raise ValueError('message exceeds 64 MiB')
