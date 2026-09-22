@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "galactus-db-python-driver"
+version = "0.1.0"
+description = "Dependency-free Bolt 4.4 driver for Galactus DB"
+requires-python = ">=3.10"
+dependencies = []
+
+[tool.setuptools]
+packages = ["galactus"]
+
+[project.urls]
+Homepage = "https://galactusdb.com"
+Repository = "https://github.com/galactusdb/galactus-db-python-driver"
