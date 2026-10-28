@@ -5,12 +5,13 @@ from .spatial import Spatial, hydrate_map
 
 MAX_MESSAGE = 64 * 1024 * 1024
 
-def encode(value, depth=0):
+def encode(value, depth=0, *, bolt5=False):
+    """Encode one value. ``bolt5`` selects the Bolt 5 forms (datetime tag I, graph element IDs)."""
     if depth >= 64:
         raise ValueError('nesting exceeds 64 levels')
-    value = dehydrate(value)
+    value = dehydrate(value, bolt5)
     if isinstance(value, Spatial): value = value.to_map()
-    def child(v): return encode(v, depth + 1)
+    def child(v): return encode(v, depth + 1, bolt5=bolt5)
     def header(n, tiny, base):
         if tiny and n < 16: return bytes([tiny | n])
         if n < 256: return bytes([base, n])
