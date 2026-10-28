@@ -1,11 +1,11 @@
 # Galactus DB drivers
 
 Seven native **database drivers**, with a shared API and zero third-party runtime
-packages. Version **0.1.0** is early access. All seven source repositories are
+packages. Version **0.2.0** is early access. All seven source repositories are
 public under [galactusdb](https://github.com/galactusdb), with `main` as the default
 branch. Registry packages have not been published; install from source using the
-language Quickstart and pin a reviewed commit. Each driver speaks **Bolt 4.4**
-directly. Each uses its host language directly and needs neither a helper runtime nor
+language Quickstart and pin a reviewed commit. Each driver speaks **Bolt 5.0 to
+5.4** directly and falls back to **Bolt 4.4** when the server offers only that. Each uses its host language directly and needs neither a helper runtime nor
 the server source at runtime.
 
 Use **driver** for package names and public APIs. Use **SDK** for a future wider
@@ -33,6 +33,8 @@ links and runtime requirements.
 4. Use `begin`, `commit`, and `rollback` for explicit transactions.
 5. Close/dispose the driver; closing an open transaction rolls it back on the
    server. Rust and C++ also close on destruction.
+6. Read the agreed `protocol_version`, `server_agent`, `connection_id` and
+   `last_bookmark` from the driver (in each language's naming).
 
 No generated models, ORM, schema registration, JSON conversion, or special
 integer class is needed for ordinary values. Parameter values are encoded
@@ -43,6 +45,12 @@ Database integers are signed 64-bit. Node returns **native `bigint`**, while
 JavaScript `number` parameters encode as floating point. Other languages use
 their native signed integer representations. Out-of-range integers fail rather
 than being truncated. Unknown wire structures remain explicit structures.
+
+Nodes and relationships expose string element ids (`elementId()` text); on Bolt
+4.4 the drivers fill them from the integer id. Offset datetimes use the protocol's
+own tag (`I` on 5.x, `F` on 4.4), and named-zone datetimes record whether their
+seconds are local or UTC. `DECIMAL` values arrive as exact strings; Python, Java
+and C# also send their standard decimal type as exact plain text.
 
 See [the blueprint and mapping table](BLUEPRINT.md) for exact semantics and
 [the spatial contract](SPATIAL.md) for geometry/geography handling.
@@ -60,7 +68,7 @@ conversion through GeoJSON. Bind a `Spatial` value directly, then use
 `spatial.fromMap($shape)` in Cypher to turn that envelope into a database shape.
 This explicit promotion is required by the existing server protocol.
 
-## Scope of 0.1
+## Scope of 0.2
 
 These are small **single-connection, eager-result drivers**. One connection is
 owned by each driver. Use a separate driver for each concurrent unit of work,
@@ -69,34 +77,51 @@ operations; Python and C++ must not be shared concurrently; Rust requires mutabl
 access. There is no connection pool, routing discovery, automatic retry,
 managed transaction callback, lazy cursor, ORM, or async API outside Node yet.
 
-`bolt://` is direct TCP. Python, Node, Go, Java and C# also support verified
-`bolt+s://` using system TLS facilities. Rust and C++ reject TLS URIs and require
-an external TLS tunnel when encryption is needed. No driver silently downgrades
-TLS. The current Galactus listener is plaintext; TLS requires a terminating proxy.
+`bolt://` is direct TCP. `bolt+s://` is verified TLS, with the URI host name
+used for SNI and the certificate check. A Galactus server started with
+`GDB_TLS_CERT` and `GDB_TLS_KEY` terminates TLS itself on the same port and then
+requires it. Python, Node, Go, Java and C# use their standard TLS libraries;
+Rust (cargo feature `tls`) and C++ (CMake option `GALACTUS_WITH_TLS`) add TLS as
+an opt-in build so the default build keeps zero dependencies. Every driver
+accepts an optional trusted-certificate file that replaces the platform store,
+for private CAs and self-signed development servers. There is no option to skip
+verification, and no driver silently downgrades TLS.
 
 Messages are limited to 64 MiB and nesting to 64 levels. Query results are eager
 and may collectively exceed one message; use Cypher `LIMIT` for large queries.
 I/O timeouts default to 30 seconds. They bound socket waits (Go uses a deadline
 for the complete operation), not total DNS resolution or every query's total
-elapsed time. Protocol/I/O/database failures discard the connection. Open a new
-driver after failure. A failed COMMIT can have an **unknown commit outcome**;
-the drivers never automatically replay a write.
+elapsed time. After a database error the driver sends RESET, marks any open
+transaction as rolled back, raises the error and stays usable. Protocol, I/O,
+TLS and authentication failures discard the connection; open a new driver after
+those. A transport failure during COMMIT is an **unknown commit outcome**; the
+drivers never automatically replay a write.
+
+Database errors keep the server code and message and add classification,
+category and title, plus client/transient/database flags and `is_retryable`
+(transient errors only). The published Galactus error codes are constants in
+every driver. Routing, session re-authentication and telemetry are not part of
+0.2.
 
 Returned graph entities are result-only database types; bind their IDs or
-properties rather than the entities. Arbitrary application objects, UUIDs and
-decimal types are not implicitly converted. Convert them explicitly to a
+properties rather than the entities. Arbitrary application objects and UUIDs
+are not implicitly converted. Convert them explicitly to a
 supported representation. Use unique result aliases when reading record maps.
 
 ## Verification
 
 [Test instructions](../tests/README.md) describe the shared golden wire fixtures,
 malformed-input tests, and isolated real-server runner. Every language has been
-compiled/executed locally against a freshly built Galactus server. The common
-spatial fixture has 57 cases per language, including both domains, XY/XYZ,
-empties, holes, nested collections, and antimeridian geography.
+compiled/executed locally against a freshly built Galactus server, three times:
+on Bolt 5.4, on a server capped at Bolt 4.4, and over the server's own TLS with a
+throwaway test CA. The common spatial fixture has 57 cases per language, including
+both domains, XY/XYZ, empties, holes, nested collections, and antimeridian
+geography. Shared Bolt 5 and datetime-pair fixtures pin the version-specific wire
+forms.
 
-Platform validation so far is Windows. TLS interoperability, Linux/macOS builds,
-pooling under load, cancellation and production hardening remain release work.
+Platform validation so far is Windows. Linux/macOS builds, pooling under load,
+cancellation and production hardening remain release work. Speaking Bolt 5 does
+not by itself make these drivers production ready.
 
 ## Further reading
 
