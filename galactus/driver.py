@@ -157,7 +157,8 @@ class Driver:
             if auth:
                 self.close()  # authentication failure is terminal
             else:
-                self._reset()
+                try: self._reset()
+                except Exception: pass  # the connection is discarded; the database error is what the caller needs
             raise error
         if msg.tag == _SUCCESS and isinstance(msg.fields[0], dict) or record and msg.tag == _RECORD and isinstance(msg.fields[0], list):
             return msg
