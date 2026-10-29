@@ -8,6 +8,7 @@ version = "0.2.0"
 description = "Dependency-free Bolt 5.4 and 4.4 driver for Galactus DB"
 requires-python = ">=3.10"
 dependencies = []
+license = {text = "Apache-2.0"}
 
 [tool.setuptools]
 packages = ["galactus"]
