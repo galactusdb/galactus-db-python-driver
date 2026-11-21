@@ -7,7 +7,7 @@ native values, and explicit transactions. The driver speaks Bolt 5.4 directly,
 falls back to Bolt 4.4 when the server asks for it, verifies TLS against the
 server's certificate, and has **zero third-party runtime package dependencies**.
 
-**Status: 0.2 / early access.** Source is available on `main`. This is a tested
+**Status: 0.3 / early access.** Source is available on `main`. This is a tested
 baseline with one connection per driver and eager results, installed from source
 as shown below. Check the [current scope](#current-scope) against your application.
 
@@ -352,10 +352,10 @@ certificate trust.
 
 ## Current scope
 
-Version 0.2 provides direct connections over Bolt 5.4 or 4.4, verified TLS,
+Version 0.3 provides direct connections over Bolt 5.4 or 4.4, verified TLS,
 basic authentication, parameterised queries, eager records and summaries,
 explicit transactions, recovery after database errors, classified errors, native
-type mapping and full supported spatial interchange. Each driver owns one
+type mapping, an object mapper and full supported spatial interchange. Each driver owns one
 connection and runs synchronously. Pooling, routing, retry callbacks, lazy
 cursors and cancellation are planned for follow-on releases. Messages are capped
 at 64 MiB and nesting at 64 levels; aggregate result memory can exceed a single
