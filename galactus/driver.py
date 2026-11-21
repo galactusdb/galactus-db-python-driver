@@ -8,7 +8,7 @@ from .codec import encode, decode, MAX_MESSAGE
 from .types import Structure
 from .types import dehydrate
 
-VERSION = '0.2.0'
+VERSION = '0.3.0'
 USER_AGENT = 'galactus-db-python-driver/' + VERSION
 # Preamble, then 5.4 accepting down to 5.0, then 4.4, then two empty proposals.
 _HANDSHAKE = bytes.fromhex('6060b017' '00040405' '00000404' '00000000' '00000000')
