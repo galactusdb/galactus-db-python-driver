@@ -18,6 +18,7 @@ as shown below. Check the [current scope](#current-scope) against your applicati
 - [Queries and results](#queries-and-results)
 - [Transactions](#transactions)
 - [Native type mapping](#native-type-mapping)
+- [Object mapping](#object-mapping)
 - [Spatial values](#spatial-values)
 - [Errors and connection lifecycle](#errors-and-connection-lifecycle)
 - [Testing](#testing)
@@ -199,8 +200,8 @@ mean the commit outcome is unknown; reconcile the result before retrying a write
 - Unknown wire structures remain explicit structures and cannot be used as
   generic application-object serialization.
 
-No ORM or automatic arbitrary-object mapping is included. Convert application
-models and UUIDs explicitly to a supported format.
+The optional [mapper](#object-mapping) converts your own types. Convert UUIDs and other
+values the database has no type for explicitly to a supported format.
 
 ```python
 from decimal import Decimal
@@ -209,6 +210,52 @@ price = driver.execute_query("RETURN decimal($d) AS d", {"d": Decimal("12.30")})
 print(Decimal(price))  # 12.30
 ```
 See the [complete type mapping](docs/BLUEPRINT.md) for precision and range details.
+
+## Object mapping
+
+The driver includes an optional mapper: declare a type as a node or a relationship, and it
+converts objects to and from the graph and writes the Cypher for the everyday operations.
+It adds no dependency. [docs/MAPPER.md](docs/MAPPER.md) is the full contract, shared by every
+Galactus driver.
+
+```python
+from dataclasses import dataclass
+from typing import Optional
+from galactus.mapper import Mapper, node, relationship, stored_as
+
+@node(key='id')
+@dataclass
+class Person:
+    id: int
+    name: str
+    email: Optional[str] = stored_as('email_address', default=None)
+
+@node(key='name')
+@dataclass
+class Company:
+    name: str
+
+@relationship(type='WORKS_AT')
+@dataclass
+class WorksAt:
+    since: int
+
+mapper = Mapper(driver)
+ann = mapper.save(Person(1, 'Ann', 'ann@example.com'))
+acme = mapper.save(Company('Acme'))
+mapper.relate(ann, WorksAt(2024), acme)
+
+mapper.find(Person, 1)                      # Person or None
+mapper.find_all(Person, {'name': 'Ann'}, limit=10)
+mapper.related(ann, WorksAt, Company)       # [(WorksAt, Company), ...]
+mapper.query(Person, 'MATCH (p:Person) WHERE p.name STARTS WITH $s RETURN p', {'s': 'A'})
+mapper.delete(Person, 1)                    # True when a node was deleted
+```
+
+A mapped type is a dataclass. A field with no default is `None` when the node lacks the property.
+`query` maps what a statement of your own returns, so the mapper never stands between you
+and Cypher. Every operation is one statement and joins the driver's open transaction when
+there is one.
 
 ## Spatial values
 
